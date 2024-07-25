@@ -1,95 +1,92 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"
+import { useState, useEffect } from 'react';
+import { subscribeService } from '../service/subscribe.service';
+import { APIService } from '../service/api.service';
+import { hashService } from '../service/hash.service';
+import { encryptService } from '../service/encrypt.service';
+import CryptoJS from 'crypto-js';
 
-export default function Home() {
+const address = '0x1D1479C185d32EB90533a08b36B3CFa5F84A0E6B';
+
+const Home = () => {
+  const [score, setScore] = useState<number | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [name, setName] = useState<string>('');
+
+  useEffect(()=> {
+    const fetchScore = async () => {
+      try {
+        const data = await APIService.get(`/info/${address}`);
+        setScore(data.score);
+      } catch (error) {
+        console.error('Error fetching score:', error);
+      }
+    };
+
+    fetchScore();
+  }, [])
+  const fetchScore = async () => {
+    try {
+      const data = await APIService.get(`/info/${address}`);
+      setScore(data.score);
+    } catch (error) {
+      console.error('Error fetching score:', error);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    try {
+      const response = await subscribeService.subscribe(address, name);
+      setMessage(response.message || 'Subscribed successfully!');
+    } catch (error) {
+      setMessage('Subscription failed');
+    }
+  };
+
+  const handleHashChallenge = async () => {
+    try {
+      const challenge = await hashService.requestHashChallenge(address);
+      const { challenge_id, sentence } = challenge;
+      const hash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(sentence)).toString(CryptoJS.enc.Hex);
+      const result = await hashService.submitHashSolution(address, challenge_id, sentence);
+      setMessage(result.message);
+      fetchScore();
+    } catch (error) {
+      console.error('Error solving hash challenge:', error);
+      setMessage('Failed to solve hash challenge');
+    }
+  };
+
+  const handleEncryptChallenge = async () => {
+    try {
+      const challenge = await encryptService.requestEncryptChallenge(address);
+      const { sentence, public_key: publicKey, challenge_id: challengeID } = challenge;
+      const result = await encryptService.submitEncryptSolution(address, challengeID, sentence, publicKey);
+      setMessage(result.message);
+      fetchScore();
+    } catch (error) {
+      console.error('Error solving encrypt challenge:', error);
+      setMessage('Failed to solve encrypt challenge');
+    }
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <div>
+      <h1>Crypto Challenge Client</h1>
+      <p>Score: {score !== null ? score : 'Loading...'}</p>
+      <input 
+        type="text" 
+        placeholder="Enter your name" 
+        value={name} 
+        onChange={(e) => setName(e.target.value)} 
+      />
+      <button onClick={fetchScore}>Refresh Score</button>
+      <button onClick={handleSubscribe}>Subscribe</button>
+      <button onClick={handleHashChallenge}>Solve Hash Challenge</button>
+      <button onClick={handleEncryptChallenge}>Solve Encrypt Challenge</button>
+      <p>{message}</p>
+    </div>
   );
-}
+};
+
+export default Home;
