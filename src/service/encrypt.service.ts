@@ -17,10 +17,19 @@ export const encryptService = {
 };
 
 const rsaEncrypt = (publicKeyPem: string, message: string) => {
-    const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
-    const encryptedMessage = publicKey.encrypt(message, 'RSA-OAEP', {
-      md: forge.md.sha256.create(),
-      mgf1: forge.mgf.mgf1.create(forge.md.sha1.create()), 
-    });
-    return forge.util.encode64(encryptedMessage);
-  };
+  const cleanedPublicKey = `-----BEGIN PUBLIC KEY-----\n${publicKeyPem
+    .replace('-----BEGIN RSA PUBLIC KEY-----', '')
+    .replace('-----END RSA PUBLIC KEY-----', '')
+    .replace(/\s+/g, '')}\n-----END PUBLIC KEY-----`;
+
+  const publicKey = forge.pki.publicKeyFromPem(cleanedPublicKey);
+  
+  const encryptedMessage = publicKey.encrypt(message, 'RSA-OAEP', {
+    md: forge.md.sha256.create(),
+    mgf1: forge.mgf.mgf1.create(forge.md.sha1.create()),
+  });
+  
+  const encodedEncryptedMessage = forge.util.encode64(encryptedMessage);
+  
+  return encodedEncryptedMessage;
+};

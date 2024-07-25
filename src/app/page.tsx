@@ -17,7 +17,7 @@ const Home = () => {
     const fetchScore = async () => {
       try {
         const data = await APIService.get(`/info/${address}`);
-        setScore(data.score);
+        setScore(data.Score);
       } catch (error) {
         console.error('Error fetching score:', error);
       }
